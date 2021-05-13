@@ -12,6 +12,7 @@ import requests
 
 from . import constants
 from . import helpers
+from . import exceptions
 
 
 ListOfDicts = NewType("ListOfDicts", List[dict])
@@ -22,14 +23,7 @@ ListOfDicts = NewType("ListOfDicts", List[dict])
 #             ...],
 #   }
 BidsAndAsks = NewType("BidsAndAsks", Dict[str, List[List[float]]])
-
-
-class Invalid(Exception):
-    pass
-
-
-class DoesntExist(Exception):
-    pass
+Number = NewType('Number', Union[float, int])
 
 
 class Client:
@@ -129,7 +123,7 @@ class Client:
         if "result" in response:
             return response["result"]
         elif "error" in response:
-            raise DoesntExist(response["error"])
+            raise exceptions.DoesntExist(response["error"])
         else:
             return response
 
@@ -168,7 +162,7 @@ class Client:
         :return: a dict contains asks and bids data
         """
         if depth > 100 or depth < 20:
-            raise Invalid("depth must be between 20 and 100")
+            raise exceptions.Invalid("depth must be between 20 and 100")
 
         return self._GET(f"markets/{pair}/orderbook", {"depth": depth})
 
@@ -213,7 +207,7 @@ class Client:
         :return: a list contains all OHLC prices in exchange
         """
         if resolution not in constants.VALID_K_LINE_RESOLUTIONS:
-            raise Invalid(
+            raise exceptions.Invalid(
                 f"resolution must be in {', '.join(constants.VALID_K_LINE_RESOLUTIONS)}"
             )
 
@@ -308,7 +302,7 @@ class Client:
         :return: a list contains all OHLC prices of etf index in exchange
         """
         if resolution not in constants.VALID_K_LINE_RESOLUTIONS:
-            raise Invalid(
+            raise exceptions.Invalid(
                 f"resolution must be in {', '.join(constants.VALID_K_LINE_RESOLUTIONS)}"
             )
 
@@ -413,8 +407,9 @@ class Client:
           should be 'omni' or 'erc20', 'trx', 'bep2', or 'sol'
         :return: a list contains deposit address
         """
-        if chain and chain not in constants.VALID_CHAINS:
-            raise Invalid(f"'chain' must be in {', '.join(constants.VALID_CHAINS)}")
+        VALID_CHAINS = ("omni", "erc20", "trx", "sol", "bep2")
+        if chain and chain not in VALID_CHAINS:
+            raise exceptions.Invalid(f"'chain' must be in {', '.join(constants.VALID_CHAINS)}")
 
         query = {}
         if chain is not None:
@@ -527,7 +522,7 @@ class Client:
         """
 
         if order not in (None, "asc"):
-            raise Invalid("Please supply either None or 'asc' for `order`")
+            raise exceptions.Invalid("Please supply either None or 'asc' for `order`")
 
         query = helpers.build_query(
             limit=limit,
@@ -540,7 +535,7 @@ class Client:
 
         return self._GET("fills", query)
 
-    def get_open_orders(self, pair=None):
+    def get_open_orders(self, pair: Optional[str] = None) -> ListOfDicts:
         """
         https://docs.ftx.com/?python#get-open-orders
 
@@ -551,7 +546,7 @@ class Client:
 
         return self._GET("orders", query)
 
-    def get_order_history(self, pair=None, start_time=None, end_time=None, limit=None):
+    def get_order_history(self, pair: Optional[str] = None, start_time: Optional[int] = None, end_time: Optional[int] = None, limit=100):
         """
         https://docs.ftx.com/?python#get-order-history
 
@@ -561,6 +556,9 @@ class Client:
         :param limit: the records limit to query
         :return: a list contains all history orders
         """
+        if limit > 100:
+            raise exceptions.Invalid("'limit' must be 100 or lower")
+
         query = helpers.build_query(
             end_time=end_time, start_time=start_time, limit=limit
         )
@@ -568,7 +566,7 @@ class Client:
 
         return self._GET("orders/history", query)
 
-    def get_open_trigger_orders(self, pair=None, type_=None):
+    def get_open_trigger_orders(self, pair: Optional[str] = None, type_: Optional[str] = None):
         """
         https://docs.ftx.com/?python#get-open-trigger-orders
 
@@ -576,6 +574,9 @@ class Client:
         :param _type: type of trigger order, should only be stop, trailing_stop, or take_profit
         :return: a list contains all open trigger orders
         """
+
+        if type_ not in (None, "stop", "trailing_stop", "take_profit"):
+            raise exceptions.Invalid("'type_' must be one of 'stop', 'trailing_stop', or 'take_profit'")
 
         query = {}
 
@@ -586,25 +587,25 @@ class Client:
 
         return self._GET("conditional_orders", query)
 
-    def get_trigger_order_triggers(self, _orderId):
+    def get_trigger_order_triggers(self, orderId: int):
         """
         https://docs.ftx.com/?python#get-open-trigger-orders
 
-        :param _orderId: the id of the order
+        :param orderId: the id of the order
         :return: a list contains trigger order triggers
         """
 
-        return self._GET(f"conditional_orders/{_orderId}/triggers")
+        return self._GET(f"conditional_orders/{orderId}/triggers")
 
     def get_trigger_order_history(
         self,
-        pair=None,
-        start_time=None,
-        end_time=None,
-        side=None,
-        type_=None,
+        pair: Optional[str] = None,
+        start_time: Optional[int] = None,
+        end_time: Optional[int] = None,
+        side: Optional[str] = None,
+        type_: Optional[str] = None,
         orderType=None,
-        limit=None,
+        limit=100,
     ):
         """
         https://docs.ftx.com/?python#get-trigger-order-history
@@ -618,6 +619,7 @@ class Client:
         :param limit: the records limit to query
         :return: a list contains all history trigger orders
         """
+        helpers.validate(limit=limit, side=side, type_=type_)
 
         query = helpers.build_query(
             start_time=start_time,
@@ -688,9 +690,9 @@ class Client:
 
         return self._DELETE("subaccounts", {"nickname": name})
 
-    # TODO: Endpoint Error > Not allowed with internal-transfers-disabled permissions
-    def transfer_balances(self, coin, size, source, destination):
+    def transfer_balances(self, coin: str, size: Number, source: str, destination: str):
         """
+        TODO: Endpoint Error > Not allowed with internal-transfers-disabled permissions
         https://docs.ftx.com/?python#transfer-between-subaccounts
 
         :param coin: the transfering coin to query
@@ -711,7 +713,7 @@ class Client:
 
         return self._POST("subaccounts/transfer", query)
 
-    def change_account_leverage(self, leverage):
+    def change_account_leverage(self, leverage: Number) -> None:
         """
         https://docs.ftx.com/?python#change-account-leverage
 
@@ -723,15 +725,15 @@ class Client:
 
     def create_order(
         self,
-        pair,
-        side,
-        price,
-        _type,
-        size,
-        reduceOnly=False,
-        ioc=False,
-        postOnly=False,
-        clientId=None,
+        pair: str,
+        side: str,
+        price: Number,
+        type_: str,
+        size: Number,
+        reduceOnly: bool = False,
+        ioc: bool = False,
+        postOnly: bool = False,
+        clientId: Optional[str] = None,
     ):
         """
         https://docs.ftx.com/?python#place-order
@@ -740,7 +742,7 @@ class Client:
           e.g. "BTC/USD" for spot, "XRP-PERP" for futures
         :param side: the trading side, should only be buy or sell
         :param price: the order price, Send null for market orders.
-        :param _type: type of order, should only be limit or market
+        :param type_: type of order, should only be limit or market
         :param size: the amount of the order for the trading pair
         :param reduceOnly: only reduce position, default is false (future only)
         :param ioc: immediate or cancel order, default is false
@@ -748,12 +750,18 @@ class Client:
         :param clientId: client order id
         :return: a list contains all info about new order
         """
+        if side not in ("buy", "sell"):
+            raise exceptions.Invalid(f"'side' should be one of 'buy' or 'sell'")
+
+        VALID_TYPES = ("limit", "market")
+        if type_ not in VALID_TYPES:
+            raise exceptions.Invalid(f"'type_' should be one of {', '.join(VALID_TYPES)}")
 
         query = {
             "market": pair,
             "side": side,
             "price": price,
-            "type": _type,
+            "type": type_,
             "size": size,
             "reduceOnly": reduceOnly,
             "ioc": ioc,
@@ -767,12 +775,12 @@ class Client:
 
     def create_trigger_order(
         self,
-        pair,
-        side,
+        pair: str,
+        side: str,
         triggerPrice,
-        size,
+        size: Number,
+        type_: str,
         orderPrice=None,
-        _type="stop",
         reduceOnly=False,
         retryUntilFilled=True,
     ):
@@ -786,7 +794,7 @@ class Client:
         :param orderPrice: the order price,
           order type is limit if this is specified; otherwise market
         :param size: the amount of the order for the trading pair
-        :param _type: type of order, should only be stop,
+        :param type_: type of order, should only be stop,
           trailingStop or takeProfit, default is stop
         :param reduceOnly: only reduce position, default is false (future only)
         :param retryUntilFilled: Whether or not to keep re-triggering until filled.
@@ -794,12 +802,15 @@ class Client:
         :return: a list contains all info about new trigger order
         """
 
+        if side not in ("buy", "sell"):
+            raise exceptions.Invalid(f"'side' should be one of 'buy' or 'sell'")
+
         query = {
             "market": pair,
             "side": side,
             "triggerPrice": triggerPrice,
             "size": size,
-            "type": _type,
+            "type": type_,
             "reduceOnly": reduceOnly,
             "retryUntilFilled": retryUntilFilled,
         }
@@ -811,7 +822,7 @@ class Client:
 
     # TODO: Either price or size must be specified
     def modify_order(
-        self, orderId: str, price: Optional[float] = None, size=None, clientId=None
+        self, orderId: str, price: Optional[Number] = None, size=None, clientId=None
     ):
         """
         https://docs.ftx.com/#modify-order
@@ -864,7 +875,6 @@ class Client:
         https://docs.ftx.com/#modify-trigger-order
 
         Please note that the order ID of the modified order will be different from that of the original order.
-
 
         :param orderId: the order ID
         :param _type: type of order,

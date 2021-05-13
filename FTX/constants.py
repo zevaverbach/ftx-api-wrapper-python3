@@ -17,4 +17,5 @@ PRIVATE_ENDPOINTS = (
     "funding_payments",
 )
 VALID_CHAINS = ("omni", "erc20", "trx", "sol", "bep2")
+VALID_SIDES = ("buy", "sell")
 RATE_LIMIT_PER_SECOND = 30
