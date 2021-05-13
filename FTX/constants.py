@@ -14,5 +14,6 @@ PRIVATE_ENDPOINTS = (
     "subaccounts",
     "fills",
     "funding_payments",
+    "otc",
 )
 RATE_LIMIT_PER_SECOND = 30

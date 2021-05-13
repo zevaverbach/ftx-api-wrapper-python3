@@ -990,6 +990,21 @@ class Client:
 
         return self._DELETE(f"srm_stakes/unstake_requests/{stakeId}")
 
+    def request_quote(self, fromCoin: str, toCoin: str, size: Number) -> dict:
+        """https://docs.ftx.com/#request-quote"""
+
+        return self._POST("otc/quotes", {'fromCoin': fromCoin, 'toCoin': toCoin, 'size': size})
+
+    def get_quote_status(self, quoteId: str) -> dict:
+        """https://docs.ftx.com/#get-quote-status"""
+
+        return self._GET(f"otc/quotes/{quoteId}")
+
+    def accept_quote(self, quoteId: str) -> dict:
+        """https://docs.ftx.com/#accept-quote"""
+
+        return self._POST(f"otc/quotes/{quoteId}/accept")
+
     def srm_stake(self, coin, size):
         """
         https://docs.ftx.com/#stake-request
@@ -999,11 +1014,21 @@ class Client:
         :return a list contains result
         """
 
-        query = {"coin": coin, "size": size}
+        return self._POST("srm_stakes/stakes", {"coin": coin, "size": size})
 
-        return self._POST("srm_stakes/stakes", query)
+    def get_margin_lending_history(self) -> Union[list, ListOfDicts]:
+        """https://docs.ftx.com/#get-lending-history"""
 
-    def get_margin_lending_rates(self):
+        return self._GET("spot_margin/history")
+
+
+    def get_margin_borrow_rates(self) -> ListOfDicts:
+        """https://docs.ftx.com/#get-borrow-rates"""
+
+        return self._GET("spot_margin/borrow_rates")
+
+
+    def get_margin_lending_rates(self) -> ListOfDicts:
         """
         https://docs.ftx.com/#get-lending-rates
         :return a list contains lending rates
@@ -1012,7 +1037,47 @@ class Client:
 
         return self._GET("spot_margin/lending_rates")
 
-    def set_margin_lending_offer(self, coin, size, rate):
+    def get_margin_lending_info(self) -> ListOfDicts:
+        """https://docs.ftx.com/#get-lending-info"""
+
+        return self._GET("spot_margin/lending_info")
+
+    def get_margin_lending_history(self) -> Union[list, ListOfDicts]:
+        """
+        https://docs.ftx.com/#get-my-lending-history
+        """
+
+        return self._GET("spot_margin/lending_history")
+
+    def get_margin_borrow_history(self) -> Union[list, ListOfDicts]:
+        """
+        https://docs.ftx.com/#get-my-borrow-history
+        """
+
+        return self._GET("spot_margin/borrow_history")
+
+    def get_margin_borrow_summary(self) -> Union[list, ListOfDicts]:
+        """
+        https://docs.ftx.com/#get-my-borrow-history
+        """
+
+        return self._GET("spot_margin/borrow_summary")
+
+    def get_margin_market_info(self, pair: str) -> ListOfDicts:
+        """
+        https://docs.ftx.com/#get-market-info
+        """
+
+        return self._GET(f"spot_margin/market_info?market={pair}")
+
+    def get_margin_lending_offers(self) -> Union[list, ListOfDicts]:
+        """ 
+        https://docs.ftx.com/#get-lending-offers
+        """
+
+        return self._GET("spot_margin/offers")
+
+    def set_margin_lending_offer(self, coin: str, size: Number, rate: Number) -> None:
         """
         https://docs.ftx.com/#submit-lending-offer
         :param coin: the lending coin to query
