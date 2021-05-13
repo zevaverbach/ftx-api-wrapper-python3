@@ -55,7 +55,7 @@ class Client:
 
         nonce = str(helpers.get_current_timestamp())
         endpoint = f"/api/{endpoint}"
-        payload = f"{nonce}{method.upper()}{endpoint}"
+        payload = f"{nonce}{method}{endpoint}"
 
         if method == "GET" and query:
             payload += "?" + urlencode(query)
@@ -69,14 +69,14 @@ class Client:
         ).hexdigest()
 
         headers = {
-                # This header is REQUIRED to send JSON data.
-                "Accept": "application/json",
-                "User-Agent": "FTX-Trader/1.0",
-                "Content-Type": "application/json",
-                "FTX-KEY": self._api_key,
-                "FTX-SIGN": sign,
-                "FTX-TS": nonce,
-            }
+            # This header is REQUIRED to send JSON data.
+            "Accept": "application/json",
+            "User-Agent": "FTX-Trader/1.0",
+            "Content-Type": "application/json",
+            "FTX-KEY": self._api_key,
+            "FTX-SIGN": sign,
+            "FTX-TS": nonce,
+        }
 
         if self._api_subaccount:
             # If you want to access a subaccount
@@ -103,17 +103,14 @@ class Client:
                 f"{constants.RATE_LIMIT_PER_SECOND} requests in the past second.\n"
                 f"{method}: '{endpoint}' query='{query}'"
             )
-            sleep(.5)
+            sleep(0.5)
         query = query or {}
 
         scope = "public"
         if any(endpoint.startswith(substr) for substr in constants.PRIVATE_ENDPOINTS):
             scope = "private"
 
-        # Build header first
         headers = self._build_headers(scope, method, endpoint, query)
-
-        # Build final url here
         url = self._build_url(scope, method, endpoint, query)
 
         try:
@@ -124,7 +121,7 @@ class Client:
             elif method == "DELETE":
                 response = requests.delete(url, headers=headers, json=query).json()
         except Exception as e:
-            print("[x] Error: {}".format(e.args[0]))
+            print(f"[x] Error: {e.args[0]}")
         finally:
             # increment the number of requests in the past second
             self._requests[dt.datetime.now()] = None
@@ -157,7 +154,7 @@ class Client:
         https://docs.ftx.com/#get-single-market
         :param pair: the trading pair to query
         """
-        return self._GET(f"markets/{pair.upper()}")
+        return self._GET(f"markets/{pair}")
 
     def get_orderbook(self, pair: str, depth: int = 20) -> BidsAndAsks:
         """
@@ -248,7 +245,7 @@ class Client:
         :return: a list contains single future info
         """
 
-        return self._GET(f"futures/{pair.upper()}")
+        return self._GET(f"futures/{pair}")
 
     def get_future_stats(self, pair: str) -> dict:
         """
@@ -258,7 +255,7 @@ class Client:
         :return: a list contains stats of a future
         """
 
-        return self._GET(f"futures/{pair.upper()}/stats")
+        return self._GET(f"futures/{pair}/stats")
 
     def get_funding_rates(self) -> ListOfDicts:
         """
@@ -418,7 +415,7 @@ class Client:
         if chain is not None:
             query["method"] = chain
 
-        return self._GET(f"wallet/deposit_address/{coin.upper()}", query)
+        return self._GET(f"wallet/deposit_address/{coin}", query)
 
     def get_deposit_history(
         self,
@@ -499,7 +496,7 @@ class Client:
         query = helpers.build_query(end_time=end_time, start_time=start_time)
 
         if coin is not None:
-            query["future"] = f"{coin.upper()}-PERP"
+            query["future"] = f"{coin}-PERP"
 
         return self._GET("funding_payments", query)
 
