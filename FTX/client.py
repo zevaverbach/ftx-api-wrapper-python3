@@ -46,43 +46,41 @@ class Client:
         self._api_timeout = timeout
 
     def _build_headers(self, scope: str, method: str, endpoint: str, query: dict):
+
+        if scope.lower() == "public":
+            return {
+                "Accept": "application/json",
+                "User-Agent": "FTX-Trader/1.0",
+            }
+
+        nonce = str(helpers.get_current_timestamp())
         endpoint = f"/api/{endpoint}"
+        payload = f"{nonce}{method.upper()}{endpoint}"
+
+        if method == "GET" and query:
+            payload += "?" + urlencode(query)
+        elif query:
+            payload += json.dumps(query)
+
+        sign = hmac.new(
+            bytes(self._api_secret, "utf-8"),
+            bytes(payload, "utf-8"),
+            hashlib.sha256,
+        ).hexdigest()
 
         headers = {
-            "Accept": "application/json",
-            "User-Agent": "FTX-Trader/1.0",
-        }
+                # This header is REQUIRED to send JSON data.
+                "Accept": "application/json",
+                "User-Agent": "FTX-Trader/1.0",
+                "Content-Type": "application/json",
+                "FTX-KEY": self._api_key,
+                "FTX-SIGN": sign,
+                "FTX-TS": nonce,
+            }
 
-        if scope.lower() == "private":
-            nonce = str(helpers.get_current_timestamp())
-            payload = f"{nonce}{method.upper()}{endpoint}"
-            if method == "GET" and query:
-                payload += "?" + urlencode(query)
-            elif query:
-                payload += json.dumps(query)
-            sign = hmac.new(
-                bytes(self._api_secret, "utf-8"),
-                bytes(payload, "utf-8"),
-                hashlib.sha256,
-            ).hexdigest()
-
-            headers.update(
-                {
-                    # This header is REQUIRED to send JSON data.
-                    "Content-Type": "application/json",
-                    "FTX-KEY": self._api_key,
-                    "FTX-SIGN": sign,
-                    "FTX-TS": nonce,
-                }
-            )
-
-            if self._api_subaccount:
-                headers.update(
-                    {
-                        # If you want to access a subaccount
-                        "FTX-SUBACCOUNT": urllib.parse.quote(self._api_subaccount)
-                    }
-                )
+        if self._api_subaccount:
+            # If you want to access a subaccount
+            headers["FTX-SUBACCOUNT"] = urllib.parse.quote(self._api_subaccount)
 
         return headers
 
