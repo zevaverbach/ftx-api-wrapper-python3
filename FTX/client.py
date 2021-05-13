@@ -161,8 +161,7 @@ class Client:
         :param depth: the price levels depth to query (max: 100 default: 20)
         :return: a dict contains asks and bids data
         """
-        if depth > 100 or depth < 20:
-            raise exceptions.Invalid("depth must be between 20 and 100")
+        helpers.validate(depth=depth)
 
         return self._GET(f"markets/{pair}/orderbook", {"depth": depth})
 
@@ -206,10 +205,7 @@ class Client:
         :param end_time: the target period before an Epoch time in seconds
         :return: a list contains all OHLC prices in exchange
         """
-        if resolution not in constants.VALID_K_LINE_RESOLUTIONS:
-            raise exceptions.Invalid(
-                f"resolution must be in {', '.join(constants.VALID_K_LINE_RESOLUTIONS)}"
-            )
+        helpers.validate(resolution=resolution)
 
         query = helpers.build_query(
             limit=limit, start_time=start_time, end_time=end_time, resolution=resolution
@@ -301,10 +297,7 @@ class Client:
         :param end_time: the target period before an Epoch time in seconds
         :return: a list contains all OHLC prices of etf index in exchange
         """
-        if resolution not in constants.VALID_K_LINE_RESOLUTIONS:
-            raise exceptions.Invalid(
-                f"resolution must be in {', '.join(constants.VALID_K_LINE_RESOLUTIONS)}"
-            )
+        helpers.validate(resolution=resolution)
 
         query = helpers.build_query(
             resolution=resolution, limit=limit, start_time=start_time, end_time=end_time
@@ -407,14 +400,8 @@ class Client:
           should be 'omni' or 'erc20', 'trx', 'bep2', or 'sol'
         :return: a list contains deposit address
         """
-        VALID_CHAINS = ("omni", "erc20", "trx", "sol", "bep2")
-        if chain and chain not in VALID_CHAINS:
-            raise exceptions.Invalid(f"'chain' must be in {', '.join(constants.VALID_CHAINS)}")
-
-        query = {}
-        if chain is not None:
-            query["method"] = chain
-
+        helpers.validate(chain=chain)
+        query = {} if chain is None else {"method": chain}
         return self._GET(f"wallet/deposit_address/{coin}", query)
 
     def get_deposit_history(
@@ -521,8 +508,7 @@ class Client:
         :return: a list contains all bills
         """
 
-        if order not in (None, "asc"):
-            raise exceptions.Invalid("Please supply either None or 'asc' for `order`")
+        helpers.validate(order=order)
 
         query = helpers.build_query(
             limit=limit,
@@ -556,8 +542,7 @@ class Client:
         :param limit: the records limit to query
         :return: a list contains all history orders
         """
-        if limit > 100:
-            raise exceptions.Invalid("'limit' must be 100 or lower")
+        helpers.validate(limit=limit)
 
         query = helpers.build_query(
             end_time=end_time, start_time=start_time, limit=limit
@@ -575,8 +560,7 @@ class Client:
         :return: a list contains all open trigger orders
         """
 
-        if type_ not in (None, "stop", "trailing_stop", "take_profit"):
-            raise exceptions.Invalid("'type_' must be one of 'stop', 'trailing_stop', or 'take_profit'")
+        helpers.validate(type_=type_)
 
         query = {}
 
@@ -750,12 +734,7 @@ class Client:
         :param clientId: client order id
         :return: a list contains all info about new order
         """
-        if side not in ("buy", "sell"):
-            raise exceptions.Invalid(f"'side' should be one of 'buy' or 'sell'")
-
-        VALID_TYPES = ("limit", "market")
-        if type_ not in VALID_TYPES:
-            raise exceptions.Invalid(f"'type_' should be one of {', '.join(VALID_TYPES)}")
+        helpers.validate(side_required=side, type_required=type_)
 
         query = {
             "market": pair,
@@ -802,8 +781,7 @@ class Client:
         :return: a list contains all info about new trigger order
         """
 
-        if side not in ("buy", "sell"):
-            raise exceptions.Invalid(f"'side' should be one of 'buy' or 'sell'")
+        helpers.validate(side_required=side)
 
         query = {
             "market": pair,
