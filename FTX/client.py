@@ -142,7 +142,10 @@ class Client:
     def _DELETE(self, endpoint, query=None):
         return self._send_request("DELETE", endpoint, query)
 
-    # Public API
+    ############### 
+    # Public API #
+    ###############
+
     def get_markets(self) -> ListOfDicts:
         """
         https://docs.ftx.com/#markets
@@ -315,7 +318,9 @@ class Client:
 
         return self._GET(f"indexes/{index}/candles", query)
 
-    # Private API
+    ############### 
+    # Private API #
+    ###############
 
     def get_account_info(self) -> dict:
         """
