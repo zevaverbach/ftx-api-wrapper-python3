@@ -47,7 +47,7 @@ class Client:
 
     def _build_headers(self, scope: str, method: str, endpoint: str, query: dict):
 
-        if scope.lower() == "public":
+        if scope == "public":
             return {
                 "Accept": "application/json",
                 "User-Agent": "FTX-Trader/1.0",
@@ -85,15 +85,15 @@ class Client:
         return headers
 
     def _build_url(self, scope: str, method: str, endpoint: str, query: dict) -> str:
-        if scope.lower() == "private":
+        if scope == "private":
             url = f"{constants.PRIVATE_API_URL}/{endpoint}"
         else:
             url = f"{constants.PUBLIC_API_URL}/{endpoint}"
 
-        if method == "GET":
-            return f"{url}?{urlencode(query, True, '/[]')}" if len(query) > 0 else url
-        else:
+        if method != "GET":
             return url
+
+        return f"{url}?{urlencode(query, True, '/[]')}" if len(query) > 0 else url
 
     def _send_request(self, method: str, endpoint: str, query: Optional[dict] = None):
         # .values() because of a bug in len(ExpiringDict)
